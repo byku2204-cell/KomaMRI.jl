@@ -36,6 +36,12 @@ allowing the user to define some of them.
     * "sim_method": defines the type of simulation. The default value is `Bloch()`, but you
         can alternatively use the `BlochDict()` simulation method. Moreover, you have the
         flexibility to create your own methods without altering the KomaMRI source code
+    * "tau": (`::Union{Real, AbstractVector, AbstractMatrix}`) exponential decay time constant 
+        for eddy currents, used exclusively when `sim_method = BlochEddy()`. Can be a scalar 
+        or a 9-element array mapping to specific spatial harmonics.
+    * "coeffs": (`::AbstractMatrix{<:Real}`) 9x3 hardware coupling coefficient matrix mapping 
+        gradient inputs to spatial error fields, used exclusively when `sim_method = BlochEddy()`. 
+        Default is `zeros(9, 3)`.
     * "sampling_rule": controls how sequence waveforms are sampled for simulation. When it is
         not provided, `simulate` derives it from the current `sim_method`, `Δt`, and `Δt_rf`
     * "preserve_samples": preserve native event samples as simulation times. Supported values are

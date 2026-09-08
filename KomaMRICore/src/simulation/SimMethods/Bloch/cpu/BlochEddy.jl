@@ -146,9 +146,10 @@ end
 
 """
     run_spin_excitation!(obj, seq, sig, M, sim_method, groupsize, backend, prealloc)
-    
-Alternate implementation of the run_spin_excitation! function in BlochSimpleSimulationMethod.jl 
-optimized for the CPU. Uses preallocation for all arrays to reduce memory usage.
+
+Executes spin excitation using the DiscreteEddySequence struct. Integrates 2nd-order 
+spatial harmonics into the effective field calculations for the BlochEddy framework, 
+whilst maintaining memory efficiency through preallocated arrays and baked 0th- and 1st-order fields.
 """
 function run_spin_excitation!(
     p::Phantom{T},

@@ -78,7 +78,7 @@ end
 
 table_columns(seqd::DiscreteEddySequence) = (
     seqd.Gx, seqd.Gy, seqd.Gz, 
-    seqd.Ez2, sqed.Ezx, seqd.Ezy, seqd.Exy, seqd.Ex2y2,
+    seqd.Ez2, seqd.Ezx, seqd.Ezy, seqd.Exy, seqd.Ex2y2,
     seqd.B1, seqd.Δf, seqd.ψ, seqd.ADC
 )
 
