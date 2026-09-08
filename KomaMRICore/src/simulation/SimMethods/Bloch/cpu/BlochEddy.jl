@@ -5,11 +5,74 @@ Simulation method for sequences with spatial eddy currents.
 """
 struct BlochEddy <: SimulationMethod end
 
+"""Stores preallocated structs for use in BlochEddy run_spin_precession! and run_spin_excitation! functions."""
+struct BlochEddyPrealloc{
+    T,
+    MT<:Mag{T},
+    RV<:AbstractVector{T},
+    ST<:Spinor{T},
+    S,
+    P,
+} <: PreallocResult{T}
+    M::MT
+    Bz_old::RV
+    Bz_new::RV
+    ϕ::RV
+    Rot::ST
+    ΔBz::RV
+    sens::S
+    coordinates::P
+end
+
+view_sens(sensitivities, _) = sensitivities
+view_sens(sensitivities::CoilSensitivities, i) = CoilSensitivities(
+    @view(sensitivities.values[i, :]),
+    sensitivities.interpolators,
+)
+
+Base.view(p::BlochEddyPrealloc, i::UnitRange) = begin
+    @views BlochEddyPrealloc(
+        p.M[i],
+        p.Bz_old[i],
+        p.Bz_new[i],
+        p.ϕ[i],
+        p.Rot[i],
+        p.ΔBz[i],
+        view_sens(p.sens, i),
+        view_motion_coordinates(p.coordinates, i),
+    )
+end
+
+"""Preallocates arrays for use in run_spin_precession! and run_spin_excitation!."""
+function prealloc(
+    ::BlochEddy, backend::KA.CPU, obj, M,
+    max_block_length, _max_adc_samples, _groupsize, sys,
+)
+    T = eltype(obj.x)
+    sens = prealloc_sensitivities(sys.receiver, obj)
+    return BlochEddyPrealloc(
+        Mag(
+            similar(M.xy),
+            similar(M.z)
+        ),
+        zeros(T, size(obj.x)),
+        zeros(T, size(obj.x)),
+        zeros(T, size(obj.x)),
+        Spinor(
+            similar(M.xy),
+            similar(M.xy)
+        ),
+        obj.Δw ./ T(2π .* γ),
+        sens,
+        prealloc_motion_coordinates(obj.motion, backend, obj, max_block_length),
+    )
+end
+
 """
     run_spin_precession!(obj, seq, sig, M, sim_method, groupsize, backend, prealloc)
 
 Executes spin precession using DiscreteEddySequence struct, evaluating 2-nd order
-spatial harmonics while benefiting from baked 0th- and 1st-orer gradients.
+spatial harmonics while benefiting from baked 0th- and 1st-order gradients.
 """
 function run_spin_precession!(
     p::Phantom{T},
@@ -20,7 +83,7 @@ function run_spin_precession!(
     sim_method::BlochEddy,
     groupsize,
     backend::KA.CPU,
-    prealloc::PreallocResult{T}
+    prealloc::BlochEddyPrealloc{T}
 ) where {T<:Real}
 
     # Rename arrays
@@ -83,7 +146,9 @@ end
 
 """
     run_spin_excitation!(obj, seq, sig, M, sim_method, groupsize, backend, prealloc)
-***********************
+    
+Alternate implementation of the run_spin_excitation! function in BlochSimpleSimulationMethod.jl 
+optimized for the CPU. Uses preallocation for all arrays to reduce memory usage.
 """
 function run_spin_excitation!(
     p::Phantom{T},
@@ -94,7 +159,7 @@ function run_spin_excitation!(
     sim_method::BlochEddy,
     groupsize,
     backend::KA.CPU,
-    prealloc::BlochCPUPrealloc
+    prealloc::BlochEddyPrealloc
 ) where {T<:Real}
 
     # Rename arrays

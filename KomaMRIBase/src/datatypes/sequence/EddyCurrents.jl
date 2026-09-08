@@ -10,7 +10,9 @@ global phase shifts, amongst other eddy current effects.
 
 # Arguments
 - `seqd`: (`::DiscreteSequence`) the input discrete sequence containing ideal waveforms.
-- `τ`: (`::Real`, `[s]`) the exponential decay time constant.
+- `τ`: (`::Union{Real, AbstractVector{<:Real}, AbstractMatrix{<:Real}}`, `[s]`) the exponential 
+    decay time constant. Can be a single scalar applied to all terms, or a 9-element 
+    vector/matrix where each entry corresponds to the decay time of a specific harmonic row.
 - `coefficients`: (`::AbstractMatrix{<:Real}`) 9x3 hardware coupling coefficients.
     Columns represent the driving gradient (X, Y, Z).
     Rows 1-4 represent the resulting 0th- and 1st-order fields (B0, X, Y, Z).
@@ -31,14 +33,17 @@ function calculate_eddy(seqd, τ, coefficients)
     if isempty(t)
         return DiscreteEddySequence(
             Gx, Gy, Gz, seqd.B1, seqd.Δf, seqd.ψ, seqd.ADC, seqd.excitation_bool, t, seqd.Δt, 
-            zeros(eltype(Gx), 0), zeros(eltypr(Gx), 0), zeros(eltypr(Gx), 0), zeros(eltypr(Gx), 0), zeros(eltypr(Gx), 0)
+            zeros(eltype(Gx), 0), zeros(eltype(Gx), 0), zeros(eltype(Gx), 0), zeros(eltype(Gx), 0), zeros(eltype(Gx), 0)
         )
     end
 
     # Calculate amplitude steps
     dGx = [0.0; diff(Gx)]
     dGy = [0.0; diff(Gy)]
-    dGz = [0.0, diff(Gz)]
+    dGz = [0.0; diff(Gz)]
+
+    # Robustly handle tau whether it is passed as a scalar, vector, or matrix
+    tau_vec = isa(τ, Number) ? fill(τ, 9) : vec(τ)
 
     C = coefficients
 
@@ -60,21 +65,21 @@ function calculate_eddy(seqd, τ, coefficients)
         # Elapsed time between steps
         dt_elapsed = t[i] - t[i-1]
 
-        # Decay between steps
-        decay = exp(-dt_elapsed / τ)
+        # Helper to compute decay safely, avoiding division by zero / NaN
+        decay(t_val) = (t_val == 0 || dt_elapsed == 0) ? zero(dt_elapsed) : exp(-dt_elapsed / t_val)
 
         # 0th- and 1st-order terms (Rows 1-4)
-        Eb0[i] = Eb0[i-1]*decay + (dGx[i]*C[1, 1] + dGy[i]*C[1, 2] + dGz[i]*C[1, 3])
-        Ex[i] = Ex[i-1]*decay + (dGx[i]*C[2, 1] + dGy[i]*C[2, 2] + dGz[i]*C[2, 3])
-        Ey[i] = Ey[i-1]*decay + (dGx[i]*C[3, 1] + dGy[i]*C[3, 2] + dGz[i]*C[3, 3])
-        Ez[i] = Ez[i-1]*decay + (dGx[i]*C[4, 1] + dGy[i]*C[4, 2] + dGz[i]*C[4, 3])
+        Eb0[i] = Eb0[i-1]*decay(tau_vec[1]) + (dGx[i]*C[1, 1] + dGy[i]*C[1, 2] + dGz[i]*C[1, 3])
+        Ex[i] = Ex[i-1]*decay(tau_vec[2]) + (dGx[i]*C[2, 1] + dGy[i]*C[2, 2] + dGz[i]*C[2, 3])
+        Ey[i] = Ey[i-1]*decay(tau_vec[3]) + (dGx[i]*C[3, 1] + dGy[i]*C[3, 2] + dGz[i]*C[3, 3])
+        Ez[i] = Ez[i-1]*decay(tau_vec[4]) + (dGx[i]*C[4, 1] + dGy[i]*C[4, 2] + dGz[i]*C[4, 3])
 
         # 2nd-order terms (Rows 5-9)
-        Ez2[i] = Ez2[i-1]*decay + (dGx[i]*C[5, 1] + dGy[i]*C[5, 2] + dGz[i]*C[5, 3])
-        Ezx[i] = Ezx[i-1]*decay + (dGx[i]*C[6, 1] + dGy[i]*C[6, 2] + dGz[i]*C[6, 3])
-        Ezy[i] = Ezy[i-1]*decay + (dGx[i]*C[7, 1] + dGy[i]*C[7, 2] + dGz[i]*C[7, 3])
-        Exy[i] = Exy[i-1]*decay + (dGx[i]*C[8, 1] + dGy[i]*C[8, 2] + dGz[i]*C[8, 3])
-        Ex2y2[i] = Ex2y2[i-1]*decay + (dGx[i]*C[9, 1] + dGy[i]*C[9, 2] + dGz[i]*C[9, 3])
+        Ez2[i] = Ez2[i-1]*decay(tau_vec[5]) + (dGx[i]*C[5, 1] + dGy[i]*C[5, 2] + dGz[i]*C[5, 3])
+        Ezx[i] = Ezx[i-1]*decay(tau_vec[6]) + (dGx[i]*C[6, 1] + dGy[i]*C[6, 2] + dGz[i]*C[6, 3])
+        Ezy[i] = Ezy[i-1]*decay(tau_vec[7]) + (dGx[i]*C[7, 1] + dGy[i]*C[7, 2] + dGz[i]*C[7, 3])
+        Exy[i] = Exy[i-1]*decay(tau_vec[8]) + (dGx[i]*C[8, 1] + dGy[i]*C[8, 2] + dGz[i]*C[8, 3])
+        Ex2y2[i] = Ex2y2[i-1]*decay(tau_vec[9]) + (dGx[i]*C[9, 1] + dGy[i]*C[9, 2] + dGz[i]*C[9, 3])
     end
 
     # Merge 1st-order error tails into ideal spatial gradients

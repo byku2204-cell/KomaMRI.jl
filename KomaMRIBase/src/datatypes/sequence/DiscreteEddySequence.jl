@@ -1,6 +1,29 @@
 """
-ADD DOCSTRING
+    seqd = DiscreteEddySequence(Gx, Gy, Gz, B1, Δf, ψ, ADC, excitation_bool, t, Δt, Ez2, Ezx, Ezy, Exy, Ex2y2)
+
+A sampled version of a Sequence struct, containing ideal event amplitudes alongside computed 2nd-order spatial eddy current fields at specified times.
+
+# Arguments
+- `Gx`: (`::AbstractVector{T<:Real}`, `[T/m]`) x-gradient vector 
+- `Gy`: (`::AbstractVector{T<:Real}`, `[T/m]`) y-gradient vector 
+- `Gz`: (`::AbstractVector{T<:Real}`, `[T/m]`) z-gradient vector 
+- `B1`: (`::AbstractVector{Complex{T<:Real}}`, `[T]`) RF amplitude vector 
+- `Δf`: (`::AbstractVector{T<:Real}`, `[Hz]`) RF carrier frequency displacement vector 
+- `ψ`: (`::AbstractVector{T<:Real}`, `[rad]`) RF rotating-frame phase vector 
+- `ADC`: (`::AbstractVector{Bool}`) ADC sample vector 
+- `excitation_bool`: (`::AbstractVector{Bool}`) RF excitation interval vector 
+- `t`: (`::AbstractVector{T<:Real}`, `[s]`) time vector 
+- `Δt`: (`::AbstractVector{T<:Real}`, `[s]`) delta time vector 
+- `Ez2`: (`::AbstractVector{T<:Real}`, `[T/m^2]`) 2nd-order Z^2 eddy current field vector 
+- `Ezx`: (`::AbstractVector{T<:Real}`, `[T/m^2]`) 2nd-order ZX eddy current field vector 
+- `Ezy`: (`::AbstractVector{T<:Real}`, `[T/m^2]`) 2nd-order ZY eddy current field vector 
+- `Exy`: (`::AbstractVector{T<:Real}`, `[T/m^2]`) 2nd-order XY eddy current field vector 
+- `Ex2y2`: (`::AbstractVector{T<:Real}`, `[T/m^2]`) 2nd-order X^2-Y^2 eddy current field vector 
+
+# Returns
+- `seqd`: (`::DiscreteEddySequence`) DiscreteEddySequence struct 
 """
+
 # 0.1 Type Definition
 struct DiscreteEddySequence{
     T<:Real, 
@@ -62,7 +85,7 @@ table_columns(seqd::DiscreteEddySequence) = (
 # 0.3 Indexing and iteration
 Base.length(seq::DiscreteEddySequence) = length(seq.Δt)
 Base.getindex(seq::DiscreteEddySequence, i::Integer) = begin
-    DiscreteSequence(seq.Gx[i, :],
+    DiscreteEddySequence(seq.Gx[i, :],
                      seq.Gy[i, :],
                      seq.Gz[i, :],
                      seq.B1[i, :],
@@ -81,7 +104,7 @@ end
 
 Base.getindex(seq::DiscreteEddySequence, i::UnitRange) = begin
     intervals = i.start:i.stop-1
-    DiscreteSequence(seq.Gx[i],
+    DiscreteEddySequence(seq.Gx[i],
                      seq.Gy[i],
                      seq.Gz[i],
                      seq.B1[i],
@@ -99,7 +122,7 @@ Base.getindex(seq::DiscreteEddySequence, i::UnitRange) = begin
 end
 Base.view(seq::DiscreteEddySequence, i::UnitRange) = @views begin
     intervals = i.start:i.stop-1
-    DiscreteSequence(seq.Gx[i],
+    DiscreteEddySequence(seq.Gx[i],
                      seq.Gy[i],
                      seq.Gz[i],
                      seq.B1[i],

@@ -31,6 +31,7 @@ export signal_to_raw_data
 # Simulator
 export Mag
 export simulate, simulate_slice_profile, default_sampling_rule
+export BlochEddy
 # Spinors
 export Spinor, Rx, Ry, Rz, Q, Un
 # Callback

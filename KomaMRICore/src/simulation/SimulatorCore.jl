@@ -258,7 +258,7 @@ function split_range(r, max_block_length, eval_intervals_per_step)
     return [i:min(i + block_length, last(r)) for i in first(r):block_length:(last(r) - 1)]
 end
 
-function get_sim_ranges(seqd::DiscreteSequence; max_block_length=Inf, max_rf_block_length=Inf, eval_intervals_per_step=1)
+function get_sim_ranges(seqd::Union{DiscreteSequence, DiscreteEddySequence}; max_block_length=Inf, max_rf_block_length=Inf, eval_intervals_per_step=1)
     ranges, ranges_bool = UnitRange{Int}[], Bool[]; isempty(seqd.Δt) && return ranges, ranges_bool
 
     starts = [firstindex(seqd.Δt); findall(seqd.excitation_bool[2:end] .!= seqd.excitation_bool[1:(end - 1)]) .+ 1]
@@ -357,6 +357,14 @@ function simulate(
     end
     # Simulation init
     seqd = discretize(seq; sampling_rule, motion=obj.motion, freq_in_phase=sim_params["freq_in_phase"]) # Sampling of Sequence waveforms
+    
+    # NEW: Intercept and convert if BlochEddy is requested
+    if sim_method isa BlochEddy
+        τ = get(sim_params, "tau", 50e-3)
+        coeffs = get(sim_params, "coeffs", zeros(9,3))
+        seqd = calculate_eddy(seqd, τ, coeffs)
+    end
+    
     parts, excitation_bool = get_sim_ranges(
         seqd;
         max_block_length=sim_params["max_block_length"],

@@ -104,6 +104,7 @@ prealloc(
 
 include("BlochSimple/BlochSimple.jl")
 include("Bloch/cpu/BlochCPU.jl")
+include("Bloch/cpu/BlochEddy.jl")
 include("BlochMagnus/cpu/BlochMagnusCPU.jl")
 include("Bloch/gpu/BlochGPU.jl")
 include("BlochMagnus/gpu/MagnusMidKernel.jl")
